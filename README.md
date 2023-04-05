@@ -2,7 +2,6 @@
 Movie Recommendation Project
 
 1. Data preprocessing:
-
 Load the data into a suitable data structure such as pandas DataFrame for easy manipulation.
 Handle missing values, if any.
 Convert data types if necessary (e.g., timestamp to datetime).
