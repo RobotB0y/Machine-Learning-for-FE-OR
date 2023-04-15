@@ -1,0 +1,64 @@
+import pandas as pd
+from surprise import Reader, Dataset, SVD
+from surprise.model_selection import cross_validate, train_test_split
+from surprise import accuracy
+
+# Read ratings data
+ratings = pd.read_csv('ratings.csv')
+
+# Take the first 10,000 rows
+ratings = ratings.iloc[:10000]
+
+# Define the reader to parse the dataset
+reader = Reader(rating_scale=(0.5, 5))
+
+# Load ratings data into Surprise dataset format
+data = Dataset.load_from_df(ratings[['userId', 'movieId', 'rating']], reader)
+
+# Create an SVD model
+svd = SVD()
+
+# Perform cross-validation (5 folds)
+cv_results = cross_validate(svd, data, measures=['RMSE', 'MAE'], cv=5, verbose=True)
+
+# Print cross-validation results
+print("Mean RMSE:", cv_results['test_rmse'].mean())
+print("Mean MAE:", cv_results['test_mae'].mean())
+
+# Split the dataset into train and test sets (e.g., 80% train, 20% test)
+train_set, test_set = train_test_split(data, test_size=0.2)
+
+# Train the SVD model on the train set
+svd.fit(train_set)
+
+# Test the trained model on the test set
+predictions = svd.test(test_set)
+
+# Compute RMSE and MAE
+rmse = accuracy.rmse(predictions)
+mae = accuracy.mae(predictions)
+
+print("Test RMSE:", rmse)
+print("Test MAE:", mae)
+
+# Pick a user ID and get their ratings
+user_id = 1
+user_ratings = ratings[ratings['userId'] == user_id]
+
+# Predict ratings for all movies not rated by the user
+all_movie_ids = ratings['movieId'].unique()
+rated_movie_ids = user_ratings['movieId'].unique()
+unrated_movie_ids = [movie_id for movie_id in all_movie_ids if movie_id not in rated_movie_ids]
+
+# Predict ratings using the trained model
+predicted_ratings = [(movie_id, svd.predict(user_id, movie_id).est) for movie_id in unrated_movie_ids]
+
+# Sort the predicted ratings in descending order
+predicted_ratings.sort(key=lambda x: x[1], reverse=True)
+
+# Print the top 10 recommended movies for the user
+top_n = 10
+recommended_movies = predicted_ratings[:top_n]
+
+print(f"Top {top_n} recommended movies for user {user_id}:")
+print(recommended_movies)
